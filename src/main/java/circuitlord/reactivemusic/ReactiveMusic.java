@@ -160,11 +160,11 @@ public class ReactiveMusic {
 				LOGGER.info("Forcing master volume to a lower default, this will only happen once on mod-install to avoid loud defaults.");
 
 				//? if >=1.20 {
-				/*mc.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.5);
+				mc.options.getSoundVolumeOption(SoundCategory.MASTER).setValue(0.5);
 				mc.options.write();
-				*///?} else {
-				mc.options.write();
-				//?}
+				//?} else {
+				/*mc.options.write();
+				*///?}
 			}
 		}
 
@@ -690,6 +690,8 @@ public class ReactiveMusic {
 
 
 
+    private static boolean isLoggingDebug = false;
+
     private static void doDebugLog(String text) {
 
         var debugString = "[ReactiveMusic]: " + text;
@@ -699,7 +701,13 @@ public class ReactiveMusic {
         if (!chatLoggingEnabled || MinecraftClient.getInstance() == null || MinecraftClient.getInstance().player == null)
             return;
 
-        MinecraftClient.getInstance().player.sendMessage(Text.literal(debugString), false);
+        if (isLoggingDebug) return;
+        isLoggingDebug = true;
+        try {
+            MinecraftClient.getInstance().player.sendMessage(Text.literal(debugString), false);
+        } finally {
+            isLoggingDebug = false;
+        }
 
     }
 

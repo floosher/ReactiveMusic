@@ -12,11 +12,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //?}
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 
 @Mixin(SoundManager.class)
 public class SoundManagerMixin {
+
+    @Unique
+    private static boolean reactiveMusic$isLoggingSound = false;
 
     //? if >=1.21.9 {
     /*@Inject(method = "play(Lnet/minecraft/client/sound/SoundInstance;)Lnet/minecraft/client/sound/SoundSystem$PlayResult;", at = @At("HEAD"), cancellable = true)
@@ -30,8 +34,13 @@ public class SoundManagerMixin {
 
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        if (mc.player != null && ReactiveMusic.printSoundEvents) {
-            mc.player.sendMessage(Text.of("[ReactiveMusic]: Sound: " + path + " Attenuation: " + soundInstance.getAttenuationType()), false);
+        if (mc.player != null && ReactiveMusic.printSoundEvents && !reactiveMusic$isLoggingSound) {
+            reactiveMusic$isLoggingSound = true;
+            try {
+                mc.player.sendMessage(Text.of("[ReactiveMusic]: Sound: " + path + " Attenuation: " + soundInstance.getAttenuationType()), false);
+            } finally {
+                reactiveMusic$isLoggingSound = false;
+            }
         }
 
         if (path.contains("music_disc")) {

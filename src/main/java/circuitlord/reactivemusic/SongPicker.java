@@ -19,12 +19,12 @@ import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.entity.vehicle.MinecartEntity;
 
 //? if >=1.20 {
-/*import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.tag.TagKey;
-*///?} else {
-import net.minecraft.tag.TagKey;
+//?} else {
+/*import net.minecraft.tag.TagKey;
 import net.minecraft.util.registry.Registry;
-//?}
+*///?}
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
@@ -185,12 +185,12 @@ public final class SongPicker {
         /*songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos, world.getSeaLevel()) == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(playerPos, world.getSeaLevel()) == Biome.Precipitation.SNOW);
         *///?} else if >=1.20 {
-        /*songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.RAIN);
+        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation(playerPos) == Biome.Precipitation.SNOW);
-        *///?} else {
-        songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation() == Biome.Precipitation.RAIN);
+        //?} else {
+        /*songpackEventMap.put(SongpackEventType.RAIN, world.isRaining() && biome.value().getPrecipitation() == Biome.Precipitation.RAIN);
         songpackEventMap.put(SongpackEventType.SNOW, world.isRaining() && biome.value().getPrecipitation() == Biome.Precipitation.SNOW);
-        //?}
+        *///?}
 
         songpackEventMap.put(SongpackEventType.STORM, world.isThundering());
 
@@ -385,10 +385,10 @@ public final class SongPicker {
         if (id != null) return id;
 
         //? if >=1.20 {
-        /*id = Registries.BLOCK.getId(block).toString();
-        *///?} else {
-        id = Registry.BLOCK.getId(block).toString();
-        //?}
+        id = Registries.BLOCK.getId(block).toString();
+        //?} else {
+        /*id = Registry.BLOCK.getId(block).toString();
+        *///?}
         BLOCK_ID_CACHE.put(block, id);
         return id;
     }
