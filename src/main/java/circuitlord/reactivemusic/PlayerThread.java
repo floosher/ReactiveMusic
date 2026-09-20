@@ -264,11 +264,9 @@ public class PlayerThread extends Thread {
 	
 	public void forceKill() {
 		try {
+			kill = true;
 			resetPlayer();
 			interrupt();
-
-			finalize();
-			kill = true;
 		} catch(Throwable e) {
 			e.printStackTrace();
 		}
