@@ -466,6 +466,10 @@ public class ReactiveMusic {
 			fadeOutTicks++;
 			thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 		}
+		else if (fadeOutTicks == FADE_DURATION) {
+			fadeOutTicks++;
+			thread.setGainPercentage(0.0f);
+		}
 		else {
 			resetPlayer();
 		}
