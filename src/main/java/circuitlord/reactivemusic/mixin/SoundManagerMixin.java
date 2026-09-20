@@ -24,7 +24,7 @@ public class SoundManagerMixin {
 
     //? if >=1.21.9 {
     /*@Inject(method = "play(Lnet/minecraft/client/sound/SoundInstance;)Lnet/minecraft/client/sound/SoundSystem$PlayResult;", at = @At("HEAD"), cancellable = true)
-    private void play(SoundInstance soundInstance, CallbackInfoReturnable<SoundSystem.PlayResult> cir) {
+    private void play(SoundInstance soundInstance, CallbackInfoReturnable<SoundSystem.PlayResult> ci) {
     *///?} else {
     @Inject(method = "Lnet/minecraft/client/sound/SoundManager;play(Lnet/minecraft/client/sound/SoundInstance;)V", at = @At("HEAD"), cancellable = true)
     private void play(SoundInstance soundInstance, CallbackInfo ci) {
