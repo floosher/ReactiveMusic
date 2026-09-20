@@ -44,6 +44,23 @@ public class SoundManagerMixin {
             }
         }
 
+        if (ReactiveMusic.config == null
+                || ReactiveMusic.config.soundsMuteMusic == null
+                || ReactiveMusic.config.soundsMuteMusicIgnoreDistance == null) {
+            return;
+        }
+
+        if (path.contains("music_disc")) {
+            ReactiveMusic.trackSoundMuteMusic(soundInstance, false);
+            return;
+        }
+
+        if (path.contains("battle.pv")) {
+            ReactiveMusic.trackSoundMuteMusic(soundInstance, false);
+            ReactiveMusic.LOGGER.info("Detected cobblemon battle event, adding to list!");
+            return;
+        }
+
         if (reactiveMusic$isMusicSound(path, id)) {
             if (reactiveMusic$matchesMuteSoundList(path, id, ReactiveMusic.config.soundsMuteMusic)) {
                 ReactiveMusic.trackSoundMuteMusic(soundInstance, false);
