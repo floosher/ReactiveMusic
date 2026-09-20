@@ -182,7 +182,7 @@ public class ReactiveMusic {
 				String curDim = mc.world.getRegistryKey().getValue().toString();
 
 				for (String dim : config.blacklistedDimensions) {
-					if (dim.equals(curDim)) {
+					if (dim.contains(curDim)) {
 						currentDimBlacklisted = true;
 						break;
 					}
