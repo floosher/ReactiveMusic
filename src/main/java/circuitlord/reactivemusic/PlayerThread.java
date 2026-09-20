@@ -46,7 +46,7 @@ public class PlayerThread extends Thread {
 	public volatile static String currentSongChoices = null;
 
 	public volatile MusicPackResource currentSongResource = null;
-	
+
 	AdvancedPlayer player;
 
 	private volatile boolean queued = false;
@@ -62,7 +62,7 @@ public class PlayerThread extends Thread {
 	boolean isPlaying() {
 		return playing && !player.getComplete();
 	}
-	
+
 	public PlayerThread() {
 		setDaemon(true);
 		setName("ReactiveMusic Player Thread");
@@ -126,27 +126,53 @@ public class PlayerThread extends Thread {
 		currentSongResource = null;
 	}
 
+	public void fadeOutAndStop(int durationMillis) {
+		if (!isPlaying()) {
+			resetPlayer();
+			return;
+		}
+
+		int steps = 30;
+		long sleepMillis = Math.max(1, durationMillis / steps);
+		float startGainPercentage = gainPercentage;
+
+		for (int i = 0; i < steps; i++) {
+			float progress = (i + 1) / (float) steps;
+			setGainPercentage(startGainPercentage * (1.0f - progress));
+			processRealGain();
+
+			try {
+				Thread.sleep(sleepMillis);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				break;
+			}
+		}
+
+		resetPlayer();
+	}
+
 	public void play(String song) {
 		resetPlayer();
 
 		currentSong = song;
 		queued = true;
 	}
-	
+
 /*	public float getGain() {
 		if(player == null)
 			return gain;
-		
+
 		AudioDevice device = player.getAudioDevice();
 		if(device != null && device instanceof JavaSoundAudioDevice)
 			return ((JavaSoundAudioDevice) device).getGain();
 		return gain;
 	}*/
-	
+
 /*	public void addGain(float gain) {
 		setGain(getGain() + gain);
 	}*/
-	
+
 	public void setGainPercentage(float newGain) {
 		gainPercentage = Math.min(1.0f, Math.max(0.0f, newGain));
 	}
@@ -154,7 +180,7 @@ public class PlayerThread extends Thread {
 	public void setMusicDiscDuckPercentage(float newGain) {
 		musicDiscDuckPercentage = newGain;
 	}
-	
+
 	public void processRealGain() {
 
 		var client = MinecraftClient.getInstance();
@@ -184,7 +210,7 @@ public class PlayerThread extends Thread {
 		float targetQuietMusicPercentage = doQuietMusic ? QUIET_VOLUME_PERCENTAGE : 1.0f;
         quietPercentage = MyMath.lerpConstant(quietPercentage, targetQuietMusicPercentage, QUIET_VOLUME_LERP_RATE);
 
-		
+
 		float minecraftGain = options.getSoundVolume(SoundCategory.MUSIC) * options.getSoundVolume(SoundCategory.MASTER);
 
 		// my jank way of changing the volume curve to be less drastic
