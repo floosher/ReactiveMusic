@@ -174,7 +174,7 @@ public class PlayerThread extends Thread {
 	}*/
 
 	public void setGainPercentage(float newGain) {
-		gainPercentage = Math.min(1.0f, Math.max(0.0f, newGain));
+		gainPercentage = Math.clamp(newGain, 0.0f, 1.0f);
 	}
 
 	public void setMusicDiscDuckPercentage(float newGain) {
@@ -215,7 +215,7 @@ public class PlayerThread extends Thread {
 
 		// my jank way of changing the volume curve to be less drastic
 		float minecraftDistFromMax = 1.0f - minecraftGain;
-		float minecraftGainAddScalar = (minecraftDistFromMax * 1.0f) * minecraftGain;
+		float minecraftGainAddScalar = (minecraftDistFromMax) * minecraftGain;
 		// cap to 1.0
 		minecraftGain = Math.min(minecraftGain + minecraftGainAddScalar, 1.0f);
 
@@ -234,7 +234,7 @@ public class PlayerThread extends Thread {
 		realGain = newRealGain;
 		if(player != null) {
 			AudioDevice device = player.getAudioDevice();
-			if(device != null && device instanceof JavaSoundAudioDevice) {
+			if(device instanceof JavaSoundAudioDevice) {
 				try {
 					((JavaSoundAudioDevice) device).setGain(newRealGain);
 				} catch(IllegalArgumentException e) {
