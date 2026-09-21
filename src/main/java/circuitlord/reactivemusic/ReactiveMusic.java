@@ -14,10 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
 public class ReactiveMusic {
 
@@ -132,9 +129,9 @@ public class ReactiveMusic {
 		if (!loadedUserSongpack) {
 
 			// for the cases where something is broken in the base songpack
-			if (!RMSongpackLoader.availableSongpacks.get(0).blockLoading) {
+			if (!RMSongpackLoader.availableSongpacks.getFirst().blockLoading) {
 				// first is the default songpack
-				setActiveSongpack(RMSongpackLoader.availableSongpacks.get(0));
+				setActiveSongpack(RMSongpackLoader.availableSongpacks.getFirst());
 			}
 		}
 	}
@@ -178,7 +175,7 @@ public class ReactiveMusic {
 			currentDimBlacklisted = false;
 
 			// see if the dimension we're in is blacklisted -- update at same time as event map to keep them in sync
-			if (mc != null && mc.world != null) {
+			if (mc.world != null) {
 				String curDim = mc.world.getRegistryKey().getValue().toString();
 
 				for (String dim : config.blacklistedDimensions) {
@@ -214,7 +211,7 @@ public class ReactiveMusic {
 
 		// Pick the highest priority one
 		if (!validEntries.isEmpty()) {
-			newEntry = validEntries.get(0);
+			newEntry = validEntries.getFirst();
 		}
 
 		processValidEvents(validEntries, previousValidEntries);
@@ -262,14 +259,11 @@ public class ReactiveMusic {
 
 				waitForStopTicks++;
 
-				boolean shouldFadeOutMusic = false;
+				boolean shouldFadeOutMusic = waitForStopTicks > getMusicStopSpeed(currentSongpack);
 
 				// handle fade-out if something's playing when a new event becomes valid
-				if (waitForStopTicks > getMusicStopSpeed(currentSongpack)) {
-					shouldFadeOutMusic = true;
-				}
 
-				// if we're queued to force stop the music, do so here
+                // if we're queued to force stop the music, do so here
 				if (queuedToStopMusic) {
 					shouldFadeOutMusic = true;
 				}
@@ -288,13 +282,9 @@ public class ReactiveMusic {
 
 				waitForNewSongTicks++;
 
-				boolean shouldStartNewSong = false;
+				boolean shouldStartNewSong = waitForNewSongTicks > getMusicDelay(currentSongpack);
 
-				if (waitForNewSongTicks > getMusicDelay(currentSongpack)) {
-					shouldStartNewSong = true;
-				}
-
-				// if we're queued to start a new song and we're not playing anything, do it
+                // if we're queued to start a new song and we're not playing anything, do it
 				if (queuedToPlayMusic) {
 					shouldStartNewSong = true;
 				}
@@ -527,7 +517,7 @@ public class ReactiveMusic {
 
 		// remove all entries that match that name
 		for (int i = loadedEntries.size() - 1; i >= 0; i--) {
-			if (loadedEntries.get(i).songpack == songpackZip.config.name) {
+			if (Objects.equals(loadedEntries.get(i).songpack, songpackZip.config.name)) {
 				loadedEntries.remove(i);
 			}
 		}
@@ -546,20 +536,15 @@ public class ReactiveMusic {
 			speed = MusicSwitchSpeed.INSTANT;
 		}
 
-		switch (speed) {
-			case INSTANT:
-				return 100;
-			case SHORT:
-				return 250;
-			case NORMAL:
-				return 900;
-			case LONG:
-				return 2400;
-		}
+        return switch (speed) {
+            case INSTANT -> 100;
+            case SHORT -> 250;
+            case NORMAL -> 900;
+            case LONG -> 2400;
+            default -> 100;
+        };
 
-		return 100;
-
-	}
+    }
 
 	public static int getMusicDelay(SongpackZip songpack) {
 
@@ -573,20 +558,15 @@ public class ReactiveMusic {
 			delay = MusicDelayLength.NONE;
 		}
 
-		switch (delay) {
-			case NONE:
-				return 0;
-			case SHORT:
-				return 250;
-			case NORMAL:
-				return 900;
-			case LONG:
-				return 2400;
-		}
+        return switch (delay) {
+            case NONE -> 0;
+            case SHORT -> 250;
+            case NORMAL -> 900;
+            case LONG -> 2400;
+            default -> 100;
+        };
 
-		return 100;
-
-	}
+    }
 
 	static void resetPlayer() {
 
