@@ -32,7 +32,6 @@ public class ReactiveMusic {
 
 	public static PlayerThread thread;
 
-
 	public static SongpackZip currentSongpack = null;
 
 	static boolean queuedToStopMusic = false;
@@ -67,30 +66,26 @@ public class ReactiveMusic {
 
 	static List<RMRuntimeEntry> previousValidEntries = new ArrayList<>();
 
-
 	static Random rand = new Random();
-
 
 	public static ModConfig config;
 
+	public static boolean isInactive() {
+		return currentSongpack == null;
+	}
 
 	// Add this static list to the class
 	//private static List<SongpackEntry> validEntries = new ArrayList<>();
 
-
 	private static List<RMRuntimeEntry> loadedEntries = new ArrayList<>();
-
 
     public static boolean printSoundEvents = false;
 
 	private static final List<TrackedSoundMuteMusic> trackedSoundsMuteMusic = new ArrayList<>();
 
-
     // Server reference removed - was unused placeholder code
 
-
     public static boolean chatLoggingEnabled = false;
-
 
 	public static void init() {
 		LOGGER.info("Initializing Reactive Music...");
@@ -106,8 +101,6 @@ public class ReactiveMusic {
 
 		RMSongpackLoader.fetchAvailableSongpacks();
 
-		boolean loadedUserSongpack = false;
-
 		// try to load a saved songpack
 		if (!config.loadedUserSongpack.isEmpty()) {
 
@@ -119,19 +112,8 @@ public class ReactiveMusic {
 				if (!songpack.config.name.equals(config.loadedUserSongpack)) continue;
 
 				setActiveSongpack(songpack);
-				loadedUserSongpack = true;
 
 				break;
-			}
-		}
-
-		// load the default one
-		if (!loadedUserSongpack) {
-
-			// for the cases where something is broken in the base songpack
-			if (!RMSongpackLoader.availableSongpacks.getFirst().blockLoading) {
-				// first is the default songpack
-				setActiveSongpack(RMSongpackLoader.availableSongpacks.getFirst());
 			}
 		}
 	}
@@ -139,8 +121,7 @@ public class ReactiveMusic {
 	public static void newTick() {
 
 		if (thread == null) return;
-		if (currentSongpack == null) return;
-		if (loadedEntries.isEmpty()) return;
+		if (isInactive()) return;
 
 		MinecraftClient mc = MinecraftClient.getInstance();
 		if (mc == null) return;
@@ -164,7 +145,6 @@ public class ReactiveMusic {
 				//?}
 			}
 		}
-
 
 		// always tick this
 		SongPicker.tickBlockCounterMap();
@@ -191,7 +171,6 @@ public class ReactiveMusic {
 			slowTickUpdateCounter = 0;
 		}
 
-
 		// -------------------------
 
 		// clear playing state if not playing
@@ -199,11 +178,9 @@ public class ReactiveMusic {
 			resetPlayer();
 		}
 
-
 		// -------------------------
 
 		processTrackedSoundsMuteMusic();
-
 
 		RMRuntimeEntry newEntry = null;
 
@@ -216,15 +193,12 @@ public class ReactiveMusic {
 
 		processValidEvents(validEntries, previousValidEntries);
 
-
 		if (currentDimBlacklisted)
 			newEntry = null;
-
 
 		if (newEntry != null) {
 
 			List<String> selectedSongs = getSelectedSongs(newEntry, validEntries);
-
 
 			// wants to switch if our current entry doesn't exist -- or is not the same as the new one
 			boolean wantsToSwitch = currentEntry == null || newEntry != currentEntry;
@@ -250,8 +224,6 @@ public class ReactiveMusic {
 				// Copy the behavior from below where it fades out
 				thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 			}
-
-
 
 			// ---- FADE OUT ----
 
@@ -301,9 +273,6 @@ public class ReactiveMusic {
 				waitForNewSongTicks = 0;
 			}
 
-
-
-
 		}
 
 		// no entries are valid, we shouldn't be playing any music!
@@ -314,10 +283,7 @@ public class ReactiveMusic {
 
 		}
 
-
-
 		thread.processRealGain();
-
 
 		previousValidEntries = validEntries;
 
@@ -368,11 +334,9 @@ public class ReactiveMusic {
 			}
 		}
 
-
 		// we've played everything recently, just give up and return this event's songs
 		return newEntry.songs;
 	}
-
 
 	public static List<RMRuntimeEntry> getValidEntries() {
 		List<RMRuntimeEntry> validEntries = new ArrayList<>();
@@ -390,7 +354,6 @@ public class ReactiveMusic {
 	}
 
 	private static void processValidEvents(List<RMRuntimeEntry> validEntries, List<RMRuntimeEntry> previousValidEntries) {
-
 
 		for (var entry : previousValidEntries) {
 
@@ -437,15 +400,8 @@ public class ReactiveMusic {
 				}
 
 			}
-
-
 		}
-
-
-
-
 	}
-
 
 	public static void tickFadeOut() {
 
@@ -464,7 +420,6 @@ public class ReactiveMusic {
 			resetPlayer();
 		}
 	}
-
 
 	public static void changeCurrentSong(String song, RMRuntimeEntry newEntry) {
 
@@ -493,8 +448,6 @@ public class ReactiveMusic {
 
 	}
 
-
-
 	public static void setActiveSongpack(SongpackZip songpackZip) {
 
 		// TODO: more than one songpack?
@@ -511,6 +464,24 @@ public class ReactiveMusic {
 		// always start new music immediately
 		queuedToPlayMusic = true;
 
+	}
+
+	public static void disableSongpack() {
+		resetPlayer();
+
+		currentSongpack = null;
+		loadedEntries.clear();
+		previousValidEntries.clear();
+
+		queuedToStopMusic = false;
+		queuedToPlayMusic = false;
+		currentEntry = null;
+		currentSong = null;
+		waitForStopTicks = 0;
+		waitForNewSongTicks = 99999;
+		fadeOutTicks = 0;
+		silenceTicks = 0;
+		musicTrackedSoundsDuckTicks = 0;
 	}
 
 	public static void deactivateSongpack(SongpackZip songpackZip) {
@@ -570,7 +541,6 @@ public class ReactiveMusic {
 
 	static void resetPlayer() {
 
-
 		// if queued or playing
 		if (!thread.notQueuedOrPlaying()) {
 			thread.resetPlayer();
@@ -581,9 +551,6 @@ public class ReactiveMusic {
 		currentEntry = null;
 		currentSong = null;
 	}
-
-
-
 
 	public static void trackSoundMuteMusic(SoundInstance soundInstance, boolean ignoreDistance) {
 		if (soundInstance == null) {
@@ -640,9 +607,6 @@ public class ReactiveMusic {
 			break;
 		}
 
-
-
-
 		// only duck for jukebox if our volume is loud enough to where it would matter
 		if (foundSoundInstance) {
 
@@ -658,8 +622,6 @@ public class ReactiveMusic {
 		}
 
 		thread.setMusicDiscDuckPercentage(1f - (musicTrackedSoundsDuckTicks / (float)FADE_DURATION));
-
-
 	}
 
 	private static class TrackedSoundMuteMusic {
@@ -671,8 +633,6 @@ public class ReactiveMusic {
 			this.ignoreDistance = ignoreDistance;
 		}
 	}
-
-
 
     private static boolean isLoggingDebug = false;
 
@@ -694,10 +654,4 @@ public class ReactiveMusic {
         }
 
     }
-
-
-
-
-
-
 }

@@ -69,9 +69,6 @@ public class RMSongpackLoader {
         long startTime = System.currentTimeMillis();
         availableSongpacks.clear();
 
-        // Load embedded songpack
-        availableSongpacks.add(loadSongpack(null, true, "ReactiveMusic.yaml"));
-
         // Load user songpacks
         Path resourcePacksPath = PlatformHelper.INSTANCE.getGameDir().resolve("resourcepacks");
         List<Path> potentialPacks = new ArrayList<>();

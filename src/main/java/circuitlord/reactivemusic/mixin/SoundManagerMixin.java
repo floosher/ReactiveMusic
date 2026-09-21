@@ -46,7 +46,8 @@ public class SoundManagerMixin {
 
         if (ReactiveMusic.config == null
                 || ReactiveMusic.config.soundsMuteMusic == null
-                || ReactiveMusic.config.soundsMuteMusicIgnoreDistance == null) {
+                || ReactiveMusic.config.soundsMuteMusicIgnoreDistance == null
+                || ReactiveMusic.isInactive()) {
             return;
         }
 

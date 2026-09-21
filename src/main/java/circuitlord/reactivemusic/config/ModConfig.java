@@ -9,13 +9,13 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 //? if >=1.20 {
 /*import net.minecraft.client.gui.DrawContext;
-*///?}
+        *///?}
 //? if >=1.21.9 {
 /*import net.minecraft.client.gui.Click;
-*///?}
+ *///?}
 //? if <1.20 {
 import net.minecraft.client.util.math.MatrixStack;
-//?}
+ //?}
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.OrderedText;
@@ -76,6 +76,12 @@ public class ModConfig {
         ReactiveMusic.setActiveSongpack(songpack);
     }
 
+    public static void disableSongpack() {
+        getConfig().loadedUserSongpack = "";
+        GSON.save();
+        ReactiveMusic.disableSongpack();
+    }
+
     private static class VanillaConfigScreen extends Screen {
         private static final int ROW_HEIGHT = 44;
         private static final int SONGPACK_START_Y = 164;
@@ -106,7 +112,7 @@ public class ModConfig {
         protected void init() {
             int centerX = this.width / 2;
             int controlX = Math.min(centerX + 18, this.width - 170);
-            int controlWidth = Math.min(150, Math.max(100, this.width - controlX - 20));
+            int controlWidth = Math.clamp(this.width - controlX - 20, 100, 150);
             ModConfig config = getConfig();
 
             addDrawableChild(button(controlX, 42, controlWidth, BUTTON_HEIGHT, enumText(config.musicDelayLength2), b -> {
@@ -133,15 +139,30 @@ public class ModConfig {
 
             int perPage = rowsPerPage();
             int pages = totalPages(perPage);
-            page = Math.max(0, Math.min(page, pages - 1));
+            page = Math.clamp(page, 0, pages - 1);
             selectedIndex = clampSelectedIndex(selectedIndex);
             int start = page * perPage;
-            int end = Math.min(RMSongpackLoader.availableSongpacks.size(), start + perPage);
+            int end = Math.min(totalSongpackRows(), start + perPage);
 
             int loadButtonX = listRight() - 78;
             for (int i = start; i < end; i++) {
-                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i);
                 int y = SONGPACK_START_Y + (i - start) * ROW_HEIGHT + 2;
+
+                if (i == 0) {
+                    ButtonWidget disableButton = button(loadButtonX, y + 5, 76, BUTTON_HEIGHT, Text.literal(ReactiveMusic.isInactive() ? "Loaded" : "Load"), b -> {
+                        selectedIndex = 0;
+                        detailsScroll = 0;
+                        disableSongpack();
+                        if (this.client != null) {
+                            this.client.setScreen(new VanillaConfigScreen(parent, page, selectedIndex));
+                        }
+                    });
+                    disableButton.active = !ReactiveMusic.isInactive();
+                    addDrawableChild(disableButton);
+                    continue;
+                }
+
+                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i - 1);
                 boolean failed = songpack.blockLoading;
                 boolean loaded = isLoaded(songpack);
                 int index = i;
@@ -289,14 +310,22 @@ public class ModConfig {
             int rowTextRight = right - 86;
             int perPage = rowsPerPage();
             int start = page * perPage;
-            int end = Math.min(RMSongpackLoader.availableSongpacks.size(), start + perPage);
+            int end = Math.min(totalSongpackRows(), start + perPage);
 
             for (int i = start; i < end; i++) {
-                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i);
                 int y = SONGPACK_START_Y + (i - start) * ROW_HEIGHT;
                 if (i == selectedIndex) {
                     context.fill(left - 4, y - 3, right, y + ROW_HEIGHT - 5, SELECTED_BG);
                 }
+
+                if (i == 0) {
+                    RowText row = disabledRowText();
+                    context.drawTextWithShadow(this.textRenderer, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color);
+                    context.drawTextWithShadow(this.textRenderer, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor);
+                    continue;
+                }
+
+                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i - 1);
                 RowText row = rowText(songpack);
                 context.drawTextWithShadow(this.textRenderer, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color);
                 context.drawTextWithShadow(this.textRenderer, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor);
@@ -312,7 +341,7 @@ public class ModConfig {
 
             List<OrderedText> lines = detailsLines(right - left - 16);
             int visibleLines = Math.max(1, (bottom - top - 16) / 10);
-            detailsScroll = Math.max(0, Math.min(detailsScroll, maxDetailsScroll(lines, visibleLines)));
+            detailsScroll = Math.clamp(detailsScroll, 0, maxDetailsScroll(lines, visibleLines));
 
             int y = top + 8;
             int end = Math.min(lines.size(), detailsScroll + visibleLines);
@@ -358,14 +387,22 @@ public class ModConfig {
             int rowTextRight = right - 86;
             int perPage = rowsPerPage();
             int start = page * perPage;
-            int end = Math.min(RMSongpackLoader.availableSongpacks.size(), start + perPage);
+            int end = Math.min(totalSongpackRows(), start + perPage);
 
             for (int i = start; i < end; i++) {
-                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i);
                 int y = SONGPACK_START_Y + (i - start) * ROW_HEIGHT;
                 if (i == selectedIndex) {
                     fill(matrices, left - 4, y - 3, right, y + ROW_HEIGHT - 5, SELECTED_BG);
                 }
+
+                if (i == 0) {
+                    RowText row = disabledRowText();
+                    this.textRenderer.drawWithShadow(matrices, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color);
+                    this.textRenderer.drawWithShadow(matrices, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor);
+                    continue;
+                }
+
+                SongpackZip songpack = RMSongpackLoader.availableSongpacks.get(i - 1);
                 RowText row = rowText(songpack);
                 this.textRenderer.drawWithShadow(matrices, fit((i == selectedIndex ? "> " : "  ") + row.name, rowTextRight - left), left, y, row.color);
                 this.textRenderer.drawWithShadow(matrices, fit(row.detail, rowTextRight - left), left + 10, y + 12, row.detailColor);
@@ -418,9 +455,20 @@ public class ModConfig {
 
         private List<OrderedText> detailsLines(int width) {
             ArrayList<OrderedText> lines = new ArrayList<>();
+
+            if (selectedIndex == 0) {
+                addWrapped(lines, "Disabled / No Songpack selected", width);
+                addWrapped(lines, "Status: " + (ReactiveMusic.isInactive() ? "Loaded" : "Available"), width);
+                addBlank(lines);
+                addWrapped(lines, ReactiveMusic.isInactive()
+                        ? "Disable Reactive Music. Minecraft's default music will be active."
+                        : "Select Load to disable Reactive Music and use Minecraft's default music.", width);
+                return lines;
+            }
+
             SongpackZip songpack = selectedSongpack();
             if (songpack == null) {
-                addWrapped(lines, "No songpacks found.", width);
+                addWrapped(lines, "No songpack selected.", width);
                 return lines;
             }
 
@@ -481,30 +529,36 @@ public class ModConfig {
             return Math.max(1, (this.height - SONGPACK_START_Y - 56) / ROW_HEIGHT);
         }
 
+        private int totalSongpackRows() {
+            return RMSongpackLoader.availableSongpacks.size() + 1;
+        }
+
         private int totalPages(int perPage) {
-            int count = RMSongpackLoader.availableSongpacks.size();
+            int count = totalSongpackRows();
             return Math.max(1, (count + perPage - 1) / perPage);
         }
 
         private int defaultSelectedIndex() {
+            if (ReactiveMusic.isInactive()) {
+                return 0;
+            }
+
             for (int i = 0; i < RMSongpackLoader.availableSongpacks.size(); i++) {
                 if (isLoaded(RMSongpackLoader.availableSongpacks.get(i))) {
-                    return i;
+                    return i + 1;
                 }
             }
-            return RMSongpackLoader.availableSongpacks.isEmpty() ? -1 : 0;
+
+            return 0;
         }
 
         private int clampSelectedIndex(int index) {
-            if (RMSongpackLoader.availableSongpacks.isEmpty()) {
-                return -1;
-            }
-            return Math.max(0, Math.min(index, RMSongpackLoader.availableSongpacks.size() - 1));
+            return Math.max(0, Math.min(index, totalSongpackRows() - 1));
         }
 
         private SongpackZip selectedSongpack() {
             selectedIndex = clampSelectedIndex(selectedIndex);
-            return selectedIndex >= 0 ? RMSongpackLoader.availableSongpacks.get(selectedIndex) : null;
+            return selectedIndex > 0 ? RMSongpackLoader.availableSongpacks.get(selectedIndex - 1) : null;
         }
 
         private boolean selectRowAt(double mouseX, double mouseY) {
@@ -526,7 +580,7 @@ public class ModConfig {
                 return -1;
             }
             int index = page * rowsPerPage() + row;
-            return index < RMSongpackLoader.availableSongpacks.size() ? index : -1;
+            return index < totalSongpackRows() ? index : -1;
         }
 
         private int listLeft() {
@@ -558,6 +612,14 @@ public class ModConfig {
                     && ReactiveMusic.currentSongpack.config != null
                     && songpack.config != null
                     && Objects.equals(ReactiveMusic.currentSongpack.config.name, songpack.config.name);
+        }
+
+        private RowText disabledRowText() {
+            if (ReactiveMusic.isInactive()) {
+                return new RowText("Disabled / No Songpack selected", "Currently loaded - Minecraft default music is used", LABEL_COLOR, MUTED_COLOR);
+            }
+
+            return new RowText("Disabled / No Songpack selected", "Use Minecraft default music", LABEL_COLOR, MUTED_COLOR);
         }
 
         private String statusText(SongpackZip songpack) {
@@ -642,7 +704,7 @@ public class ModConfig {
             /*return ButtonWidget.builder(text, action).dimensions(x, y, width, height).build();
             *///?} else {
             return new ButtonWidget(x, y, width, height, text, action);
-            //?}
+             //?}
         }
 
         private static Text enumText(Enum<?> value) {
@@ -720,7 +782,8 @@ public class ModConfig {
             if (instance.blacklistedDimensions == null) instance.blacklistedDimensions = new ArrayList<>();
             if (instance.savedHomePositions == null) instance.savedHomePositions = new HashMap<>();
             if (instance.soundsMuteMusic == null) instance.soundsMuteMusic = new ArrayList<>();
-            if (instance.soundsMuteMusicIgnoreDistance == null) instance.soundsMuteMusicIgnoreDistance = new ArrayList<>();
+            if (instance.soundsMuteMusicIgnoreDistance == null)
+                instance.soundsMuteMusicIgnoreDistance = new ArrayList<>();
             if (instance.loadedUserSongpack == null) instance.loadedUserSongpack = "";
             if (instance.musicDelayLength2 == null) instance.musicDelayLength2 = MusicDelayLength.SONGPACK_DEFAULT;
             if (instance.musicSwitchSpeed2 == null) instance.musicSwitchSpeed2 = MusicSwitchSpeed.SONGPACK_DEFAULT;
