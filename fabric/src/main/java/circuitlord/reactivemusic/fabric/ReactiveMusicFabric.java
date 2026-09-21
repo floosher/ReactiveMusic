@@ -35,6 +35,7 @@ public class ReactiveMusicFabric implements ClientModInitializer {
                 .then(ClientCommandManager.literal("toggleSoundEventLogging")
                         .executes(context -> {
                             ReactiveMusic.printSoundEvents = !ReactiveMusic.printSoundEvents;
+                            context.getSource().sendFeedback(Text.literal("[ReactiveMusic]: Sound event logging enabled: " + ReactiveMusic.printSoundEvents));
                             return 1;
                         })
                 )

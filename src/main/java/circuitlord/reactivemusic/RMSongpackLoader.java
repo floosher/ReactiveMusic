@@ -69,9 +69,6 @@ public class RMSongpackLoader {
         long startTime = System.currentTimeMillis();
         availableSongpacks.clear();
 
-        // Load embedded songpack
-        availableSongpacks.add(loadSongpack(null, true, "ReactiveMusic.yaml"));
-
         // Load user songpacks
         Path resourcePacksPath = PlatformHelper.INSTANCE.getGameDir().resolve("resourcepacks");
         List<Path> potentialPacks = new ArrayList<>();
@@ -165,10 +162,10 @@ public class RMSongpackLoader {
         } catch (Exception e) {
             songpackZip.config = new SongpackConfig();
             songpackZip.config.name = songpackPath != null ? songpackPath.getFileName().toString() : "Embedded";
-            songpackZip.errorString = e.toString() + "\n\n";
+            songpackZip.errorString = e + "\n\n";
             songpackZip.blockLoading = true;
 
-            ReactiveMusic.LOGGER.error("Failed to load properties! Embedded=" + embedded + " Exception:" + e.toString());
+            ReactiveMusic.LOGGER.error("Failed to load properties! Embedded={} Exception:{}", embedded, e);
         }
 
         // yaml.loadAs can return null for empty/invalid YAML without throwing

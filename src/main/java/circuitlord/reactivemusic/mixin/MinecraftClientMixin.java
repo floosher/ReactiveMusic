@@ -30,6 +30,13 @@ public class MinecraftClientMixin {
 
     }
 
+    @Inject(method = "stop", at = @At("HEAD"))
+    private void reactivemusic$stop(CallbackInfo ci) {
+        if (ReactiveMusic.thread != null) {
+            ReactiveMusic.thread.fadeOutAndStop(1200);
+        }
+    }
+
 
 
 }

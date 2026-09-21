@@ -55,6 +55,8 @@ public class ReactiveMusicNeoForge {
                 .then(literal("toggleSoundEventLogging")
                         .executes(context -> {
                             ReactiveMusic.printSoundEvents = !ReactiveMusic.printSoundEvents;
+                            MinecraftClient.getInstance().player.sendMessage(
+                                    Text.literal("[ReactiveMusic]: Sound event logging enabled: " + ReactiveMusic.printSoundEvents), false);
                             return 1;
                         })
                 )

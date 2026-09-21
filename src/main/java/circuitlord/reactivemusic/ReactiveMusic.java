@@ -14,10 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Random;
+import java.util.*;
 
 public class ReactiveMusic {
 
@@ -34,7 +31,6 @@ public class ReactiveMusic {
 	public static int additionalSilence = 0;
 
 	public static PlayerThread thread;
-
 
 	public static SongpackZip currentSongpack = null;
 
@@ -70,30 +66,26 @@ public class ReactiveMusic {
 
 	static List<RMRuntimeEntry> previousValidEntries = new ArrayList<>();
 
-
 	static Random rand = new Random();
-
 
 	public static ModConfig config;
 
+	public static boolean isInactive() {
+		return currentSongpack == null;
+	}
 
 	// Add this static list to the class
 	//private static List<SongpackEntry> validEntries = new ArrayList<>();
 
-
 	private static List<RMRuntimeEntry> loadedEntries = new ArrayList<>();
-
 
     public static boolean printSoundEvents = false;
 
 	private static final List<TrackedSoundMuteMusic> trackedSoundsMuteMusic = new ArrayList<>();
 
-
     // Server reference removed - was unused placeholder code
 
-
     public static boolean chatLoggingEnabled = false;
-
 
 	public static void init() {
 		LOGGER.info("Initializing Reactive Music...");
@@ -109,8 +101,6 @@ public class ReactiveMusic {
 
 		RMSongpackLoader.fetchAvailableSongpacks();
 
-		boolean loadedUserSongpack = false;
-
 		// try to load a saved songpack
 		if (!config.loadedUserSongpack.isEmpty()) {
 
@@ -122,19 +112,8 @@ public class ReactiveMusic {
 				if (!songpack.config.name.equals(config.loadedUserSongpack)) continue;
 
 				setActiveSongpack(songpack);
-				loadedUserSongpack = true;
 
 				break;
-			}
-		}
-
-		// load the default one
-		if (!loadedUserSongpack) {
-
-			// for the cases where something is broken in the base songpack
-			if (!RMSongpackLoader.availableSongpacks.get(0).blockLoading) {
-				// first is the default songpack
-				setActiveSongpack(RMSongpackLoader.availableSongpacks.get(0));
 			}
 		}
 	}
@@ -142,8 +121,7 @@ public class ReactiveMusic {
 	public static void newTick() {
 
 		if (thread == null) return;
-		if (currentSongpack == null) return;
-		if (loadedEntries.isEmpty()) return;
+		if (isInactive()) return;
 
 		MinecraftClient mc = MinecraftClient.getInstance();
 		if (mc == null) return;
@@ -168,7 +146,6 @@ public class ReactiveMusic {
 			}
 		}
 
-
 		// always tick this
 		SongPicker.tickBlockCounterMap();
 
@@ -178,11 +155,11 @@ public class ReactiveMusic {
 			currentDimBlacklisted = false;
 
 			// see if the dimension we're in is blacklisted -- update at same time as event map to keep them in sync
-			if (mc != null && mc.world != null) {
+			if (mc.world != null) {
 				String curDim = mc.world.getRegistryKey().getValue().toString();
 
 				for (String dim : config.blacklistedDimensions) {
-					if (dim.equals(curDim)) {
+					if (curDim.contains(dim)) {
 						currentDimBlacklisted = true;
 						break;
 					}
@@ -194,7 +171,6 @@ public class ReactiveMusic {
 			slowTickUpdateCounter = 0;
 		}
 
-
 		// -------------------------
 
 		// clear playing state if not playing
@@ -202,11 +178,9 @@ public class ReactiveMusic {
 			resetPlayer();
 		}
 
-
 		// -------------------------
 
 		processTrackedSoundsMuteMusic();
-
 
 		RMRuntimeEntry newEntry = null;
 
@@ -214,20 +188,17 @@ public class ReactiveMusic {
 
 		// Pick the highest priority one
 		if (!validEntries.isEmpty()) {
-			newEntry = validEntries.get(0);
+			newEntry = validEntries.getFirst();
 		}
 
 		processValidEvents(validEntries, previousValidEntries);
 
-
 		if (currentDimBlacklisted)
 			newEntry = null;
-
 
 		if (newEntry != null) {
 
 			List<String> selectedSongs = getSelectedSongs(newEntry, validEntries);
-
 
 			// wants to switch if our current entry doesn't exist -- or is not the same as the new one
 			boolean wantsToSwitch = currentEntry == null || newEntry != currentEntry;
@@ -254,22 +225,17 @@ public class ReactiveMusic {
 				thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 			}
 
-
-
 			// ---- FADE OUT ----
 
 			if (wantsToSwitch && thread.isPlaying()) {
 
 				waitForStopTicks++;
 
-				boolean shouldFadeOutMusic = false;
+				boolean shouldFadeOutMusic = waitForStopTicks > getMusicStopSpeed(currentSongpack);
 
 				// handle fade-out if something's playing when a new event becomes valid
-				if (waitForStopTicks > getMusicStopSpeed(currentSongpack)) {
-					shouldFadeOutMusic = true;
-				}
 
-				// if we're queued to force stop the music, do so here
+                // if we're queued to force stop the music, do so here
 				if (queuedToStopMusic) {
 					shouldFadeOutMusic = true;
 				}
@@ -288,13 +254,9 @@ public class ReactiveMusic {
 
 				waitForNewSongTicks++;
 
-				boolean shouldStartNewSong = false;
+				boolean shouldStartNewSong = waitForNewSongTicks > getMusicDelay(currentSongpack);
 
-				if (waitForNewSongTicks > getMusicDelay(currentSongpack)) {
-					shouldStartNewSong = true;
-				}
-
-				// if we're queued to start a new song and we're not playing anything, do it
+                // if we're queued to start a new song and we're not playing anything, do it
 				if (queuedToPlayMusic) {
 					shouldStartNewSong = true;
 				}
@@ -311,9 +273,6 @@ public class ReactiveMusic {
 				waitForNewSongTicks = 0;
 			}
 
-
-
-
 		}
 
 		// no entries are valid, we shouldn't be playing any music!
@@ -324,10 +283,7 @@ public class ReactiveMusic {
 
 		}
 
-
-
 		thread.processRealGain();
-
 
 		previousValidEntries = validEntries;
 
@@ -378,11 +334,9 @@ public class ReactiveMusic {
 			}
 		}
 
-
 		// we've played everything recently, just give up and return this event's songs
 		return newEntry.songs;
 	}
-
 
 	public static List<RMRuntimeEntry> getValidEntries() {
 		List<RMRuntimeEntry> validEntries = new ArrayList<>();
@@ -400,7 +354,6 @@ public class ReactiveMusic {
 	}
 
 	private static void processValidEvents(List<RMRuntimeEntry> validEntries, List<RMRuntimeEntry> previousValidEntries) {
-
 
 		for (var entry : previousValidEntries) {
 
@@ -447,15 +400,8 @@ public class ReactiveMusic {
 				}
 
 			}
-
-
 		}
-
-
-
-
 	}
-
 
 	public static void tickFadeOut() {
 
@@ -466,11 +412,14 @@ public class ReactiveMusic {
 			fadeOutTicks++;
 			thread.setGainPercentage(1f - (fadeOutTicks / (float)FADE_DURATION));
 		}
+		else if (fadeOutTicks == FADE_DURATION) {
+			fadeOutTicks++;
+			thread.setGainPercentage(0.0f);
+		}
 		else {
 			resetPlayer();
 		}
 	}
-
 
 	public static void changeCurrentSong(String song, RMRuntimeEntry newEntry) {
 
@@ -499,8 +448,6 @@ public class ReactiveMusic {
 
 	}
 
-
-
 	public static void setActiveSongpack(SongpackZip songpackZip) {
 
 		// TODO: more than one songpack?
@@ -519,11 +466,29 @@ public class ReactiveMusic {
 
 	}
 
+	public static void disableSongpack() {
+		resetPlayer();
+
+		currentSongpack = null;
+		loadedEntries.clear();
+		previousValidEntries.clear();
+
+		queuedToStopMusic = false;
+		queuedToPlayMusic = false;
+		currentEntry = null;
+		currentSong = null;
+		waitForStopTicks = 0;
+		waitForNewSongTicks = 99999;
+		fadeOutTicks = 0;
+		silenceTicks = 0;
+		musicTrackedSoundsDuckTicks = 0;
+	}
+
 	public static void deactivateSongpack(SongpackZip songpackZip) {
 
 		// remove all entries that match that name
 		for (int i = loadedEntries.size() - 1; i >= 0; i--) {
-			if (loadedEntries.get(i).songpack == songpackZip.config.name) {
+			if (Objects.equals(loadedEntries.get(i).songpack, songpackZip.config.name)) {
 				loadedEntries.remove(i);
 			}
 		}
@@ -542,20 +507,15 @@ public class ReactiveMusic {
 			speed = MusicSwitchSpeed.INSTANT;
 		}
 
-		switch (speed) {
-			case INSTANT:
-				return 100;
-			case SHORT:
-				return 250;
-			case NORMAL:
-				return 900;
-			case LONG:
-				return 2400;
-		}
+        return switch (speed) {
+            case INSTANT -> 100;
+            case SHORT -> 250;
+            case NORMAL -> 900;
+            case LONG -> 2400;
+            default -> 100;
+        };
 
-		return 100;
-
-	}
+    }
 
 	public static int getMusicDelay(SongpackZip songpack) {
 
@@ -569,23 +529,17 @@ public class ReactiveMusic {
 			delay = MusicDelayLength.NONE;
 		}
 
-		switch (delay) {
-			case NONE:
-				return 0;
-			case SHORT:
-				return 250;
-			case NORMAL:
-				return 900;
-			case LONG:
-				return 2400;
-		}
+        return switch (delay) {
+            case NONE -> 0;
+            case SHORT -> 250;
+            case NORMAL -> 900;
+            case LONG -> 2400;
+            default -> 100;
+        };
 
-		return 100;
-
-	}
+    }
 
 	static void resetPlayer() {
-
 
 		// if queued or playing
 		if (!thread.notQueuedOrPlaying()) {
@@ -597,9 +551,6 @@ public class ReactiveMusic {
 		currentEntry = null;
 		currentSong = null;
 	}
-
-
-
 
 	public static void trackSoundMuteMusic(SoundInstance soundInstance, boolean ignoreDistance) {
 		if (soundInstance == null) {
@@ -656,9 +607,6 @@ public class ReactiveMusic {
 			break;
 		}
 
-
-
-
 		// only duck for jukebox if our volume is loud enough to where it would matter
 		if (foundSoundInstance) {
 
@@ -674,8 +622,6 @@ public class ReactiveMusic {
 		}
 
 		thread.setMusicDiscDuckPercentage(1f - (musicTrackedSoundsDuckTicks / (float)FADE_DURATION));
-
-
 	}
 
 	private static class TrackedSoundMuteMusic {
@@ -688,7 +634,7 @@ public class ReactiveMusic {
 		}
 	}
 
-
+    private static boolean isLoggingDebug = false;
 
     private static void doDebugLog(String text) {
 
@@ -699,13 +645,13 @@ public class ReactiveMusic {
         if (!chatLoggingEnabled || MinecraftClient.getInstance() == null || MinecraftClient.getInstance().player == null)
             return;
 
-        MinecraftClient.getInstance().player.sendMessage(Text.literal(debugString), false);
+        if (isLoggingDebug) return;
+        isLoggingDebug = true;
+        try {
+            MinecraftClient.getInstance().player.sendMessage(Text.literal(debugString), false);
+        } finally {
+            isLoggingDebug = false;
+        }
 
     }
-
-
-
-
-
-
 }
