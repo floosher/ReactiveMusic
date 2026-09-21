@@ -25,7 +25,7 @@ stonecutter {
         // NeoForge 1.21.11 blocked on yarn-mappings-patch-neoforge update
         // Re-add: branch("neoforge") { versions("1.21.1", "1.21.11") }
 
-        vcsVersion = "1.21.1"
+        vcsVersion = "1.19.2"
     }
 }
 
