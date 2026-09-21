@@ -418,7 +418,7 @@ public class ModConfig {
 
             List<OrderedText> lines = detailsLines(right - left - 16);
             int visibleLines = Math.max(1, (bottom - top - 16) / 10);
-            detailsScroll = Math.max(0, Math.min(detailsScroll, maxDetailsScroll(lines, visibleLines)));
+            detailsScroll = Math.clamp(detailsScroll, 0, maxDetailsScroll(lines, visibleLines));
 
             int y = top + 8;
             int end = Math.min(lines.size(), detailsScroll + visibleLines);
