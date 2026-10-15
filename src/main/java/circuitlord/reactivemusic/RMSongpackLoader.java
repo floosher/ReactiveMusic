@@ -20,6 +20,9 @@ public class RMSongpackLoader {
         // quick-path for embedded files
         if (embedded) {
             resource.inputStream = RMSongpackLoader.class.getResourceAsStream("/musicpack/" + fileName);
+            if (resource.inputStream == null) {
+                return null;
+            }
             return resource;
         }
 
@@ -40,6 +43,9 @@ public class RMSongpackLoader {
                     resource.inputStream = Files.newInputStream(filePath);
                     resource.fileSystem = fs;
                     return resource;
+                } else {
+                    fs.close();
+                    return null;
                 }
             } catch (IOException e) {
                 ReactiveMusic.LOGGER.error("Failed while loading file from zip " + e.getMessage());
@@ -57,9 +63,51 @@ public class RMSongpackLoader {
                 } catch (IOException e) {
                     ReactiveMusic.LOGGER.error(e.toString());
                 }
-            } else {
-                ReactiveMusic.LOGGER.error("Couldn't find file! " + filePath);
             }
+        }
+
+        return null;
+    }
+
+    public static MusicPackResource getSongResource(Path dirPath, String songName, boolean embedded) {
+        if (songName == null || songName.isEmpty()) return null;
+
+        String lower = songName.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".ogg") || lower.endsWith(".mp3")) {
+            return getInputStream(dirPath, "music/" + songName, embedded);
+        }
+
+        // Try .ogg first, then .mp3
+        MusicPackResource res = getInputStream(dirPath, "music/" + songName + ".ogg", embedded);
+        if (res != null && res.inputStream != null) {
+            return res;
+        }
+        if (res != null) {
+            try { res.close(); } catch (Exception ignored) {}
+        }
+
+        res = getInputStream(dirPath, "music/" + songName + ".mp3", embedded);
+        if (res != null && res.inputStream != null) {
+            return res;
+        }
+        if (res != null) {
+            try { res.close(); } catch (Exception ignored) {}
+        }
+
+        res = getInputStream(dirPath, "music/" + songName + ".OGG", embedded);
+        if (res != null && res.inputStream != null) {
+            return res;
+        }
+        if (res != null) {
+            try { res.close(); } catch (Exception ignored) {}
+        }
+
+        res = getInputStream(dirPath, "music/" + songName + ".MP3", embedded);
+        if (res != null && res.inputStream != null) {
+            return res;
+        }
+        if (res != null) {
+            try { res.close(); } catch (Exception ignored) {}
         }
 
         return null;
@@ -249,9 +297,9 @@ public class RMSongpackLoader {
             for (int j = songpackZip.config.entries[i].songs.length - 1; j >= 0; j--) {
 
                 String song = songpackZip.config.entries[i].songs[j];
-                var inputStream = getInputStream(songpackZip.path, "music/" + song + ".mp3", songpackZip.embedded);
+                var resource = getSongResource(songpackZip.path, song, songpackZip.embedded);
 
-                if (inputStream == null) {
+                if (resource == null || resource.inputStream == null) {
                     StringBuilder eventName = new StringBuilder();
                     for (int k = 0; k < songpackZip.config.entries[i].events.length; k++) {
                         eventName.append(songpackZip.config.entries[i].events[k].toString());
@@ -265,12 +313,10 @@ public class RMSongpackLoader {
                     list.remove(j);
                     songpackZip.config.entries[i].songs = list.toArray(new String[0]);
 
-
-
                     // songpackZip.blockLoading = true;
                 } else {
                     try {
-                        inputStream.close();
+                        resource.close();
                     } catch (Exception ignored) {}
                 }
             }
