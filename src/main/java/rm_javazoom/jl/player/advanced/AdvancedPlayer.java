@@ -21,6 +21,7 @@ package rm_javazoom.jl.player.advanced;
 
 import java.io.InputStream;
 
+import circuitlord.reactivemusic.RMAudioPlayer;
 import rm_javazoom.jl.decoder.Bitstream;
 import rm_javazoom.jl.decoder.BitstreamException;
 import rm_javazoom.jl.decoder.Decoder;
@@ -34,7 +35,7 @@ import rm_javazoom.jl.player.FactoryRegistry;
  * a hybrid of javazoom.jl.player.Player tweeked to include <code>play(startFrame, endFrame)</code>
  * hopefully this will be included in the api
  */
-public class AdvancedPlayer
+public class AdvancedPlayer implements RMAudioPlayer
 {
 	/** The MPEG audio bitstream.*/
 	private Bitstream bitstream;
@@ -248,7 +249,10 @@ public class AdvancedPlayer
 	 */
 	public void stop()
 	{
-		listener.playbackFinished(createEvent(PlaybackEvent.STOPPED));
+		queuedToStop = true;
+		if (listener != null) {
+			listener.playbackFinished(createEvent(PlaybackEvent.STOPPED));
+		}
 		close();
 	}
 	
@@ -275,4 +279,7 @@ public class AdvancedPlayer
 	}
 
 	public boolean getComplete() { return complete; }
+
+	@Override
+	public boolean isComplete() { return complete; }
 }
