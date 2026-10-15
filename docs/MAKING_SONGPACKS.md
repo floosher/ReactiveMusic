@@ -1,7 +1,7 @@
 
 # Making Songpacks
 
-Songpacks are constructed as folders with a yaml configuration file and a folder with mp3 music files.
+Songpacks are constructed as folders with a yaml configuration file and a folder with music files (OGG or MP3 format).
 
 They're loaded from the `resourcepacks` folder, although they're not actually resource packs and are instead selected from the configuration UI. This is purely to make including songpacks easier.
 
@@ -59,7 +59,7 @@ Here's an example songpack entry:
 
 - `(SongpackEventType) events` The specific events that need to be valid for this entry to play. (see details below)
 - `(Boolean) allowFallback` (default false) If we've played all songs from this event, should  we "fallback" to other events that are also valid? (good for one-off events you don't want to play over and over)
-- `(String[]) songs` The list of song files to pick from when this event plays. These are picked from the `music` sub-folder.
+- `(String[]) songs` The list of song files to pick from when this event plays. These are picked from the `music` sub-folder (`.ogg` and `.mp3` files are supported; extension in the config is optional).
 
 <br><br>
 
