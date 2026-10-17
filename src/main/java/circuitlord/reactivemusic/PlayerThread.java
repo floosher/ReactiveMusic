@@ -47,7 +47,7 @@ public class PlayerThread extends Thread {
 
 	public volatile MusicPackResource currentSongResource = null;
 
-	AdvancedPlayer player;
+	RMAudioPlayer player;
 
 	private volatile boolean queued = false;
 
@@ -60,7 +60,7 @@ public class PlayerThread extends Thread {
 	}
 
 	boolean isPlaying() {
-		return playing && !player.getComplete();
+		return playing && player != null && !player.isComplete();
 	}
 
 	public PlayerThread() {
@@ -76,11 +76,13 @@ public class PlayerThread extends Thread {
 
 				if(queued && currentSong != null) {
 
-					currentSongResource = RMSongpackLoader.getInputStream(ReactiveMusic.currentSongpack.path, "music/" + currentSong + ".mp3", ReactiveMusic.currentSongpack.embedded);
-					if(currentSongResource == null || currentSongResource.inputStream == null)
+					currentSongResource = RMSongpackLoader.getSongResource(ReactiveMusic.currentSongpack.path, currentSong, ReactiveMusic.currentSongpack.embedded);
+					if(currentSongResource == null || currentSongResource.inputStream == null) {
+						queued = false;
 						continue;
+					}
 
-					player = new AdvancedPlayer(currentSongResource.inputStream);
+					player = RMAudioPlayerFactory.createPlayer(currentSongResource.inputStream);
 					queued = false;
 
 				}
@@ -94,7 +96,13 @@ public class PlayerThread extends Thread {
 
 					ReactiveMusic.LOGGER.info("Playing " + currentSong);
 					playing = true;
-					player.play();
+					try {
+						player.play();
+					} catch(Exception e) {
+						ReactiveMusic.LOGGER.error("Error playing " + currentSong + ": " + e.getMessage());
+					} finally {
+						playing = false;
+					}
 
 				}
 
@@ -110,16 +118,16 @@ public class PlayerThread extends Thread {
 		playing = false;
 
 		if(player != null)
-			player.queuedToStop = true;
+			player.stop();
 
 		queued = false;
 		currentSong = null;
 
-		if (currentSongResource != null && currentSongResource.fileSystem != null) {
+		if (currentSongResource != null) {
             try {
 				currentSongResource.close();
             } catch (Exception e) {
-                ReactiveMusic.LOGGER.error("Failed to close file system/input stream " + e.getMessage());
+                ReactiveMusic.LOGGER.error("Failed to close resource: " + e.getMessage());
             }
         }
 
