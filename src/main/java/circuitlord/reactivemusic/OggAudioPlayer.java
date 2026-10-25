@@ -33,6 +33,7 @@ public class OggAudioPlayer implements RMAudioPlayer {
 
     public OggAudioPlayer(InputStream stream, AudioDevice device) throws JavaLayerException {
         this.stream = stream;
+
         if (device != null) {
             this.audio = device;
         } else {
@@ -79,6 +80,7 @@ public class OggAudioPlayer implements RMAudioPlayer {
             STBVorbisInfo info = STBVorbisInfo.malloc();
             int channels;
             int sampleRate;
+
             try {
                 synchronized (decoderLock) {
                     if (decoder == 0 || closed) {
@@ -174,9 +176,11 @@ public class OggAudioPlayer implements RMAudioPlayer {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         int read;
+
         while ((read = in.read(buffer)) != -1) {
             out.write(buffer, 0, read);
         }
+
         return out.toByteArray();
     }
 }
