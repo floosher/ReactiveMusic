@@ -21,9 +21,11 @@ public class OggAudioPlayer implements RMAudioPlayer {
     private final InputStream stream;
     private AudioDevice audio;
     private long decoder = 0;
+    private ByteBuffer oggData;
+    private final Object decoderLock = new Object();
     private volatile boolean queuedToStop = false;
-    private boolean closed = false;
-    private boolean complete = false;
+    private volatile boolean closed = false;
+    private volatile boolean complete = false;
 
     public OggAudioPlayer(InputStream stream) throws JavaLayerException {
         this(stream, null);
@@ -31,6 +33,7 @@ public class OggAudioPlayer implements RMAudioPlayer {
 
     public OggAudioPlayer(InputStream stream, AudioDevice device) throws JavaLayerException {
         this.stream = stream;
+
         if (device != null) {
             this.audio = device;
         } else {
@@ -62,12 +65,14 @@ public class OggAudioPlayer implements RMAudioPlayer {
                 return;
             }
 
-            ByteBuffer buffer = BufferUtils.createByteBuffer(rawData.length);
-            buffer.put(rawData);
-            buffer.flip();
+            oggData = BufferUtils.createByteBuffer(rawData.length);
+            oggData.put(rawData);
+            oggData.flip();
 
             IntBuffer error = BufferUtils.createIntBuffer(1);
-            decoder = STBVorbis.stb_vorbis_open_memory(buffer, error, null);
+            synchronized (decoderLock) {
+                decoder = STBVorbis.stb_vorbis_open_memory(oggData, error, null);
+            }
             if (decoder == 0) {
                 throw new IOException("Failed to open OGG Vorbis stream, error: " + error.get(0));
             }
@@ -75,8 +80,14 @@ public class OggAudioPlayer implements RMAudioPlayer {
             STBVorbisInfo info = STBVorbisInfo.malloc();
             int channels;
             int sampleRate;
+
             try {
-                STBVorbis.stb_vorbis_get_info(decoder, info);
+                synchronized (decoderLock) {
+                    if (decoder == 0 || closed) {
+                        return;
+                    }
+                    STBVorbis.stb_vorbis_get_info(decoder, info);
+                }
                 channels = info.channels();
                 sampleRate = info.sample_rate();
             } finally {
@@ -98,7 +109,15 @@ public class OggAudioPlayer implements RMAudioPlayer {
 
             while (!queuedToStop && !closed) {
                 pcmBuffer.clear();
-                int samplesPerChannel = STBVorbis.stb_vorbis_get_samples_short_interleaved(decoder, channels, pcmBuffer);
+
+                int samplesPerChannel;
+                synchronized (decoderLock) {
+                    if (decoder == 0 || queuedToStop || closed) {
+                        break;
+                    }
+                    samplesPerChannel = STBVorbis.stb_vorbis_get_samples_short_interleaved(decoder, channels, pcmBuffer);
+                }
+
                 if (samplesPerChannel <= 0) {
                     break;
                 }
@@ -119,11 +138,9 @@ public class OggAudioPlayer implements RMAudioPlayer {
             AudioDevice out = audio;
             if (out != null) {
                 out.flush();
-                synchronized (this) {
-                    complete = (!closed && !queuedToStop);
-                    close();
-                }
             }
+
+            complete = (!closed && !queuedToStop);
         } finally {
             close();
         }
@@ -133,18 +150,25 @@ public class OggAudioPlayer implements RMAudioPlayer {
     public synchronized void close() {
         if (!closed) {
             closed = true;
+
+            synchronized (decoderLock) {
+                if (decoder != 0) {
+                    STBVorbis.stb_vorbis_close(decoder);
+                    decoder = 0;
+                }
+                oggData = null;
+            }
+
             AudioDevice out = audio;
             audio = null;
             if (out != null) {
                 out.close();
             }
-            if (decoder != 0) {
-                STBVorbis.stb_vorbis_close(decoder);
-                decoder = 0;
-            }
+
             try {
                 stream.close();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -152,9 +176,11 @@ public class OggAudioPlayer implements RMAudioPlayer {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         int read;
+
         while ((read = in.read(buffer)) != -1) {
             out.write(buffer, 0, read);
         }
+
         return out.toByteArray();
     }
 }
